@@ -1,5 +1,5 @@
 import { RequestHandler } from "express";
-import { ClassifyRequest, ClassifyResponse, classifyComplaint, detectLanguage } from "@shared/api";
+import { ClassifyRequest, ClassifyResponse, classifyComplaint, detectLanguage } from "../../shared/api";
 
 export const handleClassify: RequestHandler = async (req, res) => {
   try {
