@@ -6,7 +6,7 @@ import {
   CreateComplaintResponse,
   classifyComplaint,
   detectLanguage,
-} from "@shared/api";
+} from "../../shared/api";
 
 const DATA_DIR = path.resolve("server", "data");
 const CSV_PATH = path.join(DATA_DIR, "complaints.csv");
@@ -58,7 +58,7 @@ export const handleCreateComplaint: RequestHandler = async (req, res) => {
       lang,
       category,
       "new",
-      JSON.stringify(text).slice(1, -1), // escape commas/newlines via JSON string
+      JSON.stringify(text).slice(1, -1),
     ].join(",") + "\n";
 
     fs.appendFileSync(CSV_PATH, row, "utf8");
