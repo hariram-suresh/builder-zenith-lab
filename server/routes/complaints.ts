@@ -1,6 +1,7 @@
 import { RequestHandler } from "express";
 import fs from "fs";
 import path from "path";
+import { Pool } from "pg";
 import {
   CreateComplaintRequest,
   CreateComplaintResponse,
@@ -10,6 +11,25 @@ import {
 
 const DATA_DIR = path.resolve("server", "data");
 const CSV_PATH = path.join(DATA_DIR, "complaints.csv");
+
+const DATABASE_URL = process.env.DATABASE_URL;
+let pool: Pool | null = null;
+async function ensureTable() {
+  if (!pool) return;
+  await pool.query(`CREATE TABLE IF NOT EXISTS complaints (
+    id serial primary key,
+    ticket_id text unique not null,
+    created_at timestamptz not null,
+    language text not null,
+    category text not null,
+    status text not null,
+    text text not null
+  )`);
+}
+if (DATABASE_URL) {
+  pool = new Pool({ connectionString: DATABASE_URL, ssl: { rejectUnauthorized: false } });
+  ensureTable().catch(() => void 0);
+}
 
 function ensureDataDir() {
   if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -51,17 +71,26 @@ export const handleCreateComplaint: RequestHandler = async (req, res) => {
     const ticketId = generateTicketId();
     const createdAt = new Date().toISOString();
 
-    ensureCsvHeader();
-    const row = [
-      ticketId,
-      createdAt,
-      lang,
-      category,
-      "new",
-      JSON.stringify(text).slice(1, -1),
-    ].join(",") + "\n";
-
-    fs.appendFileSync(CSV_PATH, row, "utf8");
+    if (pool) {
+      await ensureTable();
+      await pool.query(
+        `INSERT INTO complaints (ticket_id, created_at, language, category, status, text)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         ON CONFLICT (ticket_id) DO NOTHING`,
+        [ticketId, createdAt, lang, category, "new", text],
+      );
+    } else {
+      ensureCsvHeader();
+      const row = [
+        ticketId,
+        createdAt,
+        lang,
+        category,
+        "new",
+        JSON.stringify(text).slice(1, -1),
+      ].join(",") + "\n";
+      fs.appendFileSync(CSV_PATH, row, "utf8");
+    }
 
     const response: CreateComplaintResponse = {
       ticketId,
