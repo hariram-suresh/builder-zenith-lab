@@ -1,21 +1,38 @@
 import { RequestHandler } from "express";
-import { ClassifyRequest, ClassifyResponse, classifyComplaint, detectLanguage, ComplaintCategory } from "../../shared/api";
+import {
+  ClassifyRequest,
+  ClassifyResponse,
+  classifyComplaint,
+  detectLanguage,
+  ComplaintCategory,
+} from "../../shared/api";
 
-async function classifyWithHuggingFace(text: string): Promise<{ label: string; score: number }[] | null> {
+async function classifyWithHuggingFace(
+  text: string,
+): Promise<{ label: string; score: number }[] | null> {
   const token = process.env.HF_API_KEY || process.env.HUGGINGFACE_API_KEY;
   const model = process.env.HF_MODEL_ID;
   if (!token || !model) return null;
   try {
-    const resp = await fetch(`https://api-inference.huggingface.co/models/${model}`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ inputs: text }),
-    });
+    const resp = await fetch(
+      `https://api-inference.huggingface.co/models/${model}`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ inputs: text }),
+      },
+    );
     if (!resp.ok) return null;
     const data = await resp.json();
     const arr = Array.isArray(data) ? data : data?.[0];
     if (!Array.isArray(arr)) return null;
-    return arr.map((x: any) => ({ label: String(x.label), score: Number(x.score) }));
+    return arr.map((x: any) => ({
+      label: String(x.label),
+      score: Number(x.score),
+    }));
   } catch {
     return null;
   }
@@ -23,7 +40,9 @@ async function classifyWithHuggingFace(text: string): Promise<{ label: string; s
 
 function mapLabelToCategory(label: string): ComplaintCategory {
   const l = label.toLowerCase();
-  const mappingEnv = process.env.HF_LABELS ? (JSON.parse(process.env.HF_LABELS) as Record<string, ComplaintCategory>) : {};
+  const mappingEnv = process.env.HF_LABELS
+    ? (JSON.parse(process.env.HF_LABELS) as Record<string, ComplaintCategory>)
+    : {};
   if (mappingEnv[l]) return mappingEnv[l];
   if (/(garbage|trash|waste|litter)/.test(l)) return "garbage";
   if (/(street.?light|lamp|bulb)/.test(l)) return "streetlight";

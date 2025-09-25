@@ -27,7 +27,10 @@ async function ensureTable() {
   )`);
 }
 if (DATABASE_URL) {
-  pool = new Pool({ connectionString: DATABASE_URL, ssl: { rejectUnauthorized: false } });
+  pool = new Pool({
+    connectionString: DATABASE_URL,
+    ssl: { rejectUnauthorized: false },
+  });
   ensureTable().catch(() => void 0);
 }
 
@@ -40,14 +43,9 @@ function ensureCsvHeader() {
   if (!fs.existsSync(CSV_PATH)) {
     fs.writeFileSync(
       CSV_PATH,
-      [
-        "ticketId",
-        "createdAt",
-        "language",
-        "category",
-        "status",
-        "text",
-      ].join(",") + "\n",
+      ["ticketId", "createdAt", "language", "category", "status", "text"].join(
+        ",",
+      ) + "\n",
       "utf8",
     );
   }
@@ -81,14 +79,15 @@ export const handleCreateComplaint: RequestHandler = async (req, res) => {
       );
     } else {
       ensureCsvHeader();
-      const row = [
-        ticketId,
-        createdAt,
-        lang,
-        category,
-        "new",
-        JSON.stringify(text).slice(1, -1),
-      ].join(",") + "\n";
+      const row =
+        [
+          ticketId,
+          createdAt,
+          lang,
+          category,
+          "new",
+          JSON.stringify(text).slice(1, -1),
+        ].join(",") + "\n";
       fs.appendFileSync(CSV_PATH, row, "utf8");
     }
 
